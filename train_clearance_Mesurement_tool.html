@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>建築限界測定</title>
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy2: #122040;
+    --blue: #1a3a6e;
+    --accent: #f0b429;
+    --accent2: #e8a800;
+    --white: #f0f4ff;
+    --gray: #8899bb;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --border: #1e3a6e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 30px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--navy2);
+    border-bottom: 2px solid var(--accent);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+  }
+  .header .status-badge {
+    font-size: 11px;
+    background: var(--blue);
+    padding: 3px 8px;
+    border-radius: 10px;
+    color: var(--gray);
+  }
+  .header .status-badge.active { background: var(--green); color: #fff; }
+
+  /* SCREENS */
+  .screen { display: none; padding: 16px; }
+  .screen.active { display: block; }
+
+  /* SETUP SCREEN */
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    margin-top: 20px;
+  }
+  .section-title:first-child { margin-top: 0; }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .input-group label {
+    font-size: 11px;
+    color: var(--gray);
+    letter-spacing: 0.05em;
+  }
+  .input-group input, .input-group select {
+    background: var(--navy2);
+    border: 1.5px solid var(--border);
+    color: var(--white);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 17px;
+    width: 100%;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  .input-group input:focus, .input-group select:focus {
+    border-color: var(--accent);
+  }
+  .input-group select option { background: var(--navy2); }
+
+  .direction-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .dir-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--navy2);
+    color: var(--gray);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .dir-btn.selected {
+    background: var(--accent);
+    color: var(--navy);
+    border-color: var(--accent);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: var(--navy);
+    border: none;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 24px;
+    letter-spacing: 0.05em;
+  }
+  .btn-primary:active { opacity: 0.8; }
+
+  /* MEASURE SCREEN */
+  .session-info {
+    background: var(--navy2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .session-info .station {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .session-info .track {
+    font-size: 13px;
+    color: var(--gray);
+    margin-top: 2px;
+  }
+  .session-info .progress-text {
+    font-size: 13px;
+    color: var(--gray);
+    text-align: right;
+  }
+  .session-info .progress-count {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--white);
+    text-align: right;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  .no-display {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .no-label {
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--gray);
+    text-transform: uppercase;
+  }
+  .no-value {
+    font-size: 64px;
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -2px;
+  }
+
+  .measure-inputs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .measure-input-group {
+    flex: 1;
+    background: var(--navy2);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    transition: border-color 0.15s;
+  }
+  .measure-input-group.focused {
+    border-color: var(--accent);
+  }
+  .measure-input-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--gray);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .measure-input-group input {
+    background: transparent;
+    border: none;
+    color: var(--white);
+    font-size: 32px;
+    font-weight: 700;
+    width: 100%;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .measure-input-group input::placeholder { color: var(--border); }
+
+  .btn-register {
+    width: 100%;
+    padding: 18px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+  }
+  .btn-register:active { opacity: 0.8; }
+  .btn-register:disabled {
+    background: var(--border);
+    color: var(--gray);
+    cursor: not-allowed;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .btn-undo {
+    flex: 1;
+    padding: 14px;
+    background: transparent;
+    color: var(--gray);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-undo:active { background: var(--navy2); }
+  .btn-skip {
+    flex: 1;
+    padding: 14px;
+    background: transparent;
+    color: var(--gray);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-skip:active { background: var(--navy2); }
+
+  /* LOG */
+  .log-title {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .log-container {
+    background: var(--navy2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .log-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    gap: 12px;
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-no {
+    color: var(--accent);
+    font-weight: 700;
+    min-width: 36px;
+    font-variant-numeric: tabular-nums;
+  }
+  .log-vals {
+    flex: 1;
+    color: var(--white);
+    font-variant-numeric: tabular-nums;
+  }
+  .log-vals span { color: var(--gray); font-size: 12px; margin: 0 4px; }
+  .log-skip { color: var(--gray); font-style: italic; font-size: 13px; }
+
+  /* COMPLETE SCREEN */
+  .complete-header {
+    text-align: center;
+    padding: 30px 0 20px;
+  }
+  .complete-icon { font-size: 56px; margin-bottom: 12px; }
+  .complete-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .complete-sub { font-size: 14px; color: var(--gray); }
+
+  .summary-card {
+    background: var(--navy2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-label { color: var(--gray); }
+  .summary-value { color: var(--white); font-weight: 600; }
+
+  .btn-export {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: var(--navy);
+    border: none;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  .btn-new {
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    color: var(--gray);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--navy2);
+    border: 1px solid var(--accent);
+    color: var(--white);
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🚃 建築限界測定</h1>
+  <span class="status-badge" id="headerStatus">待機中</span>
+</div>
+
+<!-- SETUP SCREEN -->
+<div class="screen active" id="screenSetup">
+  <div class="section-title">測定箇所</div>
+  <div class="input-row">
+    <div class="input-group">
+      <label>駅名</label>
+      <input type="text" id="stationName" placeholder="例：洗馬" autocomplete="off">
+    </div>
+    <div class="input-group" style="max-width:100px">
+      <label>番線</label>
+      <input type="text" id="trackName" placeholder="例：上" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="section-title">測定範囲</div>
+  <div class="input-row">
+    <div class="input-group">
+      <label>開始 No</label>
+      <input type="number" id="startNo" placeholder="1" inputmode="numeric">
+    </div>
+    <div class="input-group">
+      <label>終了 No</label>
+      <input type="number" id="endNo" placeholder="50" inputmode="numeric">
+    </div>
+  </div>
+
+  <div class="section-title">測定方向</div>
+  <div class="direction-toggle">
+    <button class="dir-btn selected" id="btnForward" onclick="setDirection('forward')">▶ 順方向<br><small style="font-weight:400;font-size:11px">No小 → No大</small></button>
+    <button class="dir-btn" id="btnReverse" onclick="setDirection('reverse')">◀ 逆方向<br><small style="font-weight:400;font-size:11px">No大 → No小</small></button>
+  </div>
+
+  <button class="btn-primary" onclick="startMeasurement()">測定開始 →</button>
+</div>
+
+<!-- MEASURE SCREEN -->
+<div class="screen" id="screenMeasure">
+  <div class="session-info">
+    <div>
+      <div class="station" id="displayStation">—</div>
+      <div class="track" id="displayTrack">—</div>
+    </div>
+    <div>
+      <div class="progress-text">完了 / 合計</div>
+      <div class="progress-count" id="displayProgress">0 / 0</div>
+    </div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <div class="no-display">
+    <div class="no-label">現在の No</div>
+    <div class="no-value" id="displayNo">—</div>
+  </div>
+
+  <div class="measure-inputs">
+    <div class="measure-input-group" id="groupHanare">
+      <label>離れ（mm）</label>
+      <input type="number" id="inputHanare" placeholder="0000" inputmode="numeric" maxlength="4" oninput="onHanareInput()">
+    </div>
+    <div class="measure-input-group" id="groupTakasa">
+      <label>高さ（mm）</label>
+      <input type="number" id="inputTakasa" placeholder="0000" inputmode="numeric" maxlength="4">
+    </div>
+  </div>
+
+  <button class="btn-register" id="btnRegister" onclick="registerData()">登録 →</button>
+
+  <div class="action-row">
+    <button class="btn-undo" onclick="undoLast()">↩ 取り消し</button>
+    <button class="btn-skip" onclick="skipNo()">スキップ →</button>
+  </div>
+
+  <div class="log-title">入力履歴</div>
+  <div class="log-container" id="logContainer">
+    <div class="log-item"><span style="color:var(--gray);font-size:13px;padding:4px 0">まだデータがありません</span></div>
+  </div>
+</div>
+
+<!-- COMPLETE SCREEN -->
+<div class="screen" id="screenComplete">
+  <div class="complete-header">
+    <div class="complete-icon">✅</div>
+    <div class="complete-title">測定完了</div>
+    <div class="complete-sub" id="completeSubtext">データを保存してください</div>
+  </div>
+
+  <div class="summary-card" id="summaryCard"></div>
+
+  <button class="btn-export" onclick="exportCSV()">📥 CSVで保存</button>
+  <button class="btn-new" onclick="newMeasurement()">＋ 新しい測定を開始</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let session = {
+  station: '',
+  track: '',
+  startNo: 1,
+  endNo: 1,
+  direction: 'forward',
+  sequence: [],   // 入力順のNoリスト
+  data: {},       // { no: { hanare, takasa } }
+  currentIdx: 0
+};
+
+function setDirection(dir) {
+  session.direction = dir;
+  document.getElementById('btnForward').classList.toggle('selected', dir === 'forward');
+  document.getElementById('btnReverse').classList.toggle('selected', dir === 'reverse');
+}
+
+function startMeasurement() {
+  const station = document.getElementById('stationName').value.trim();
+  const track = document.getElementById('trackName').value.trim();
+  const startNo = parseInt(document.getElementById('startNo').value);
+  const endNo = parseInt(document.getElementById('endNo').value);
+
+  if (!station) { showToast('駅名を入力してください'); return; }
+  if (!track) { showToast('番線を入力してください'); return; }
+  if (isNaN(startNo) || isNaN(endNo)) { showToast('No を入力してください'); return; }
+  if (startNo < 1 || endNo < 1) { showToast('No は 1 以上で入力してください'); return; }
+
+  session.station = station;
+  session.track = track;
+  session.startNo = Math.min(startNo, endNo);
+  session.endNo = Math.max(startNo, endNo);
+  session.data = {};
+  session.currentIdx = 0;
+
+  // 測定順序を生成
+  const nos = [];
+  for (let n = session.startNo; n <= session.endNo; n++) nos.push(n);
+  session.sequence = session.direction === 'reverse' ? [...nos].reverse() : nos;
+
+  updateMeasureScreen();
+  showScreen('screenMeasure');
+  document.getElementById('headerStatus').textContent = '測定中';
+  document.getElementById('headerStatus').classList.add('active');
+  document.getElementById('inputHanare').focus();
+}
+
+function updateMeasureScreen() {
+  const total = session.sequence.length;
+  const done = Object.keys(session.data).length;
+  const currentNo = session.sequence[session.currentIdx];
+
+  document.getElementById('displayStation').textContent = session.station;
+  document.getElementById('displayTrack').textContent = session.track + '番線';
+  document.getElementById('displayNo').textContent = currentNo !== undefined ? currentNo : '—';
+  document.getElementById('displayProgress').textContent = done + ' / ' + total;
+  document.getElementById('progressFill').style.width = (total > 0 ? (done / total) * 100 : 0) + '%';
+
+  // ログ更新
+  renderLog();
+}
+
+function onHanareInput() {
+  const val = document.getElementById('inputHanare').value;
+  if (val.length >= 4) {
+    document.getElementById('inputTakasa').focus();
+  }
+}
+
+function registerData() {
+  const hanare = document.getElementById('inputHanare').value.trim();
+  const takasa = document.getElementById('inputTakasa').value.trim();
+
+  if (!hanare || !takasa) { showToast('離れと高さを入力してください'); return; }
+  if (isNaN(parseInt(hanare)) || isNaN(parseInt(takasa))) { showToast('数値で入力してください'); return; }
+
+  const currentNo = session.sequence[session.currentIdx];
+  session.data[currentNo] = { hanare: parseInt(hanare), takasa: parseInt(takasa) };
+
+  session.currentIdx++;
+  document.getElementById('inputHanare').value = '';
+  document.getElementById('inputTakasa').value = '';
+
+  if (session.currentIdx >= session.sequence.length) {
+    showComplete();
+  } else {
+    updateMeasureScreen();
+    document.getElementById('inputHanare').focus();
+  }
+}
+
+function skipNo() {
+  const currentNo = session.sequence[session.currentIdx];
+  session.data[currentNo] = { hanare: null, takasa: null, skipped: true };
+  session.currentIdx++;
+
+  if (session.currentIdx >= session.sequence.length) {
+    showComplete();
+  } else {
+    updateMeasureScreen();
+    document.getElementById('inputHanare').focus();
+  }
+}
+
+function undoLast() {
+  if (session.currentIdx === 0) { showToast('取り消せるデータがありません'); return; }
+  session.currentIdx--;
+  const no = session.sequence[session.currentIdx];
+  delete session.data[no];
+  document.getElementById('inputHanare').value = '';
+  document.getElementById('inputTakasa').value = '';
+  updateMeasureScreen();
+  document.getElementById('inputHanare').focus();
+  showToast('No.' + no + ' を取り消しました');
+}
+
+function renderLog() {
+  const container = document.getElementById('logContainer');
+  const nos = [...session.sequence].slice(0, session.currentIdx).reverse();
+
+  if (nos.length === 0) {
+    container.innerHTML = '<div class="log-item"><span style="color:var(--gray);font-size:13px;padding:4px 0">まだデータがありません</span></div>';
+    return;
+  }
+
+  container.innerHTML = nos.map(no => {
+    const d = session.data[no];
+    if (!d) return '';
+    if (d.skipped) {
+      return `<div class="log-item"><span class="log-no">No.${no}</span><span class="log-skip">スキップ</span></div>`;
+    }
+    return `<div class="log-item"><span class="log-no">No.${no}</span><span class="log-vals">${d.hanare}<span>離れ</span>/ ${d.takasa}<span>高さ</span></span></div>`;
+  }).join('');
+}
+
+function showComplete() {
+  const validData = Object.entries(session.data).filter(([, v]) => !v.skipped);
+  const skipped = Object.values(session.data).filter(v => v.skipped).length;
+
+  document.getElementById('completeSubtext').textContent =
+    session.station + ' ' + session.track + '番線';
+
+  document.getElementById('summaryCard').innerHTML = `
+    <div class="summary-row"><span class="summary-label">駅名</span><span class="summary-value">${session.station}</span></div>
+    <div class="summary-row"><span class="summary-label">番線</span><span class="summary-value">${session.track}</span></div>
+    <div class="summary-row"><span class="summary-label">測定範囲</span><span class="summary-value">No.${session.startNo} 〜 No.${session.endNo}</span></div>
+    <div class="summary-row"><span class="summary-label">測定件数</span><span class="summary-value">${validData.length} 件</span></div>
+    <div class="summary-row"><span class="summary-label">スキップ</span><span class="summary-value">${skipped} 件</span></div>
+  `;
+
+  showScreen('screenComplete');
+  document.getElementById('headerStatus').textContent = '完了';
+  document.getElementById('headerStatus').classList.remove('active');
+}
+
+function exportCSV() {
+  // No昇順にソートして出力
+  const rows = [['駅名', '番線', 'No', '離れ', '高さ']];
+  const sortedNos = Object.keys(session.data).map(Number).sort((a, b) => a - b);
+
+  sortedNos.forEach(no => {
+    const d = session.data[no];
+    if (!d.skipped) {
+      rows.push([session.station, session.track, no, d.hanare, d.takasa]);
+    } else {
+      rows.push([session.station, session.track, no, '', '']);
+    }
+  });
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const bom = '\uFEFF'; // Excel用BOM
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const filename = `建築限界_${session.station}_${session.track}_${getDateStr()}.csv`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast('CSVを保存しました');
+}
+
+function getDateStr() {
+  const d = new Date();
+  return d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2);
+}
+
+function newMeasurement() {
+  session = { station:'', track:'', startNo:1, endNo:1, direction:'forward', sequence:[], data:{}, currentIdx:0 };
+  document.getElementById('stationName').value = '';
+  document.getElementById('trackName').value = '';
+  document.getElementById('startNo').value = '';
+  document.getElementById('endNo').value = '';
+  setDirection('forward');
+  showScreen('screenSetup');
+  document.getElementById('headerStatus').textContent = '待機中';
+  document.getElementById('headerStatus').classList.remove('active');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Enterキーで次の入力へ
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const active = document.getElementById('screenMeasure');
+    if (!active.classList.contains('active')) return;
+    const hanare = document.getElementById('inputHanare');
+    const takasa = document.getElementById('inputTakasa');
+    if (document.activeElement === hanare) {
+      takasa.focus();
+    } else if (document.activeElement === takasa) {
+      registerData();
+    }
+  }
+});
+
+// フォーカス時にinput groupにスタイル付与
+['inputHanare','inputTakasa'].forEach(id => {
+  const el = document.getElementById(id);
+  const group = el.closest('.measure-input-group');
+  el.addEventListener('focus', () => group.classList.add('focused'));
+  el.addEventListener('blur', () => group.classList.remove('focused'));
+});
+</script>
+</body>
+</html>
